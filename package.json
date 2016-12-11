@@ -1,6 +1,6 @@
 {
   "name": "release-dump",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Dump your Github tagged releases into a changelog file. Super stupid, super simple.",
   "main": "releaseDump.js",
   "scripts": {
