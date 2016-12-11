@@ -1,0 +1,61 @@
+#! /usr/bin/env node
+
+// "colors": "^1.1.2",
+// "http-client": "^4.3.1",
+// "lodash": "^4.17.2",
+// "moment": "^2.17.1",
+// "nopt": "^3.0.6",
+
+require('colors')
+
+const info = '[RELEASE DUMP]'.green
+const warn = '[RELEASE DUMP]'.orange
+const danger = '[RELEASE DUMP]'.red
+
+const path = require('path')
+
+require('dotenv').config({path: path.resolve(process.env.HOME, './.env'), silent: true})
+require('dotenv').config({silent: true})
+
+const nopt = require('nopt')
+const Stream = require('stream').Stream
+
+const getGitRepo = require('../utils/getGitRepo')
+
+const releaseDump = require('../releaseDump')
+
+const knownOpts = {
+  'repo': String,
+  'path': path,
+  'output': String,
+  'overwrite': Boolean,
+  'token': String
+}
+let currentRepo = ''
+const shortHands = {
+  'r': '--repo',
+  'p': '--path',
+  'o': '--output',
+  'x': '--overwrite',
+  't': '--token'
+}
+
+const parsed = nopt(knownOpts, shortHands)
+
+parsed.repo = parsed.repo || getGitRepo()
+parsed.path = parsed.path || process.cwd()
+parsed.output = parsed.output || 'CHANGELOG.md'
+parsed.overwrite = parsed.overwrite || false
+parsed.token = parsed.token || process.env.GITHUB_TOKEN || false
+
+if (!parsed.token) throw new Error('access token required to prevent API overage')
+
+delete parsed.argv
+
+releaseDump(parsed)
+.then(() => {
+  console.log(info, `Release info for\n${parsed.repo}\nhas been successfully dumped into\n${parsed.output}`)
+})
+.catch((error) => {
+  console.log(danger, `There was an issue while dumping the release info for\n${parsed.repo}\n\n`, error)
+})
