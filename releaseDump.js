@@ -1,9 +1,3 @@
-// { overwrite: true,
-//   repo: 'brigadehub/brigadehub',
-//   path: '/Users/therebelrobot/git/github.com/brigadehub/brigadehub',
-//   output: 'CHANGELOG.md',
-//   token: '0cb2be5f7710b79650a77243597b1edc80b7406d' }
-
 const request = require('superagent')
 const _ = require('lodash')
 const fs = require('fs')
@@ -11,34 +5,39 @@ const fs = require('fs')
 
 module.exports = function releaseDump (options){
   return new Promise((resolve, reject) => {
-    getAllReleases(options, (releases) => {
-      releases = _.sortBy(releases, 'published_at').reverse()
-      const changelog = buildChangeLog(releases)
-      console.log(changelog)
-      const filepath = `${options.path}/${options.output}`
-      try {
-        stats = fs.lstatSync(filepath)
-        if (!options.overwrite) {
-          return reject('File already exists. Please move file, or specify overwrite flag.')
-        }
-        if (!stats.isFile()) {
-          return reject(filepath + ' exists, but is not a file! Cannot overwrite!')
-        }
-        fs.unlink(filepath, function(err){
-          if (err && err.code !== 'ENOENT') return reject(err)
-          var options = { flag : 'w' };
+    try{
+      getAllReleases(options, (err, releases) => {
+        if (err) return reject(err)
+        releases = _.sortBy(releases, 'published_at').reverse()
+        const changelog = buildChangeLog(releases)
+        console.log(changelog)
+        const filepath = `${options.path}/${options.output}`
+        try {
+          stats = fs.lstatSync(filepath)
+          if (!options.overwrite) {
+            return reject('File already exists. Please move file, or specify overwrite flag.')
+          }
+          if (!stats.isFile()) {
+            return reject(filepath + ' exists, but is not a file! Cannot overwrite!')
+          }
+          fs.unlink(filepath, function(err){
+            if (err && err.code !== 'ENOENT') return reject(err)
+            var options = { flag : 'w' };
+            fs.writeFile(filepath, changelog, options, function(err) {
+                if (err) return reject(err)
+                resolve()
+            });
+        });
+        } catch (e) {
           fs.writeFile(filepath, changelog, options, function(err) {
               if (err) return reject(err)
               resolve()
           });
-      });
-      } catch (e) {
-        fs.writeFile(filepath, changelog, options, function(err) {
-            if (err) return reject(err)
-            resolve()
-        });
-      }
-    })
+        }
+      })
+    } catch (e){
+      reject(e)
+    }
   })
 }
 
@@ -50,6 +49,7 @@ function getAllReleases (options, cb, releases, url) {
     .type('json')
     .accept('json')
     .end((err, response) => {
+      if(err) cb(err)
       if(!response.body || !response.body.length) return cb(releases)
       const newReleases = response.body.map(repo => {
         if(repo.body.indexOf('\r\n') > -1) repo.body = repo.body.split('\r\n').join('\n')
@@ -76,10 +76,10 @@ function getAllReleases (options, cb, releases, url) {
             newUrl = relLink
           }
         })
-        if(!newUrl) return cb(releases)
+        if(!newUrl) return cb(null, releases)
         return getAllReleases(options, cb, releases, newUrl)
       }
-      cb(releases)
+      cb(null, releases)
     })
 }
 function buildChangeLog (releases) {
