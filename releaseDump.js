@@ -10,7 +10,6 @@ module.exports = function releaseDump (options){
         if (err) return reject(err)
         releases = _.sortBy(releases, 'published_at').reverse()
         const changelog = buildChangeLog(releases)
-        console.log(changelog)
         const filepath = `${options.path}/${options.output}`
         try {
           stats = fs.lstatSync(filepath)
@@ -60,7 +59,6 @@ function getAllReleases (options, cb, releases, url) {
         }
       })
       releases = releases.concat(newReleases)
-      console.log(response.headers)
       if (response.headers.link && response.headers.link.indexOf('>; rel="next"') > -1) {
         let link
         if(response.headers.link.indexOf(',') > -1) {
